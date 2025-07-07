@@ -1,4 +1,5 @@
 import hashlib
+import re
 from django.shortcuts import render,redirect
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from .models import  FAANG, AF_session_id,info,login,comments,authLogin, tickits, sql_lab_table,Blogs,CF_user,AF_admin
@@ -407,34 +408,34 @@ def cmd(request):
 def cmd_lab(request):
     if request.user.is_authenticated:
         if(request.method=="POST"):
-            domain=request.POST.get('domain')
-            domain=domain.replace("https://www.",'')
-            os=request.POST.get('os')
-            print(os)
-            if(os=='win'):
-                command="nslookup {}".format(domain)
+            domain = request.POST.get('domain', '').strip()
+            domain = domain.replace("https://www.", '')
+            if not re.match(r'^[a-zA-Z0-9.-]+$', domain):
+                output = "Invalid domain name"
+                return render(request, 'Lab/CMD/cmd_lab.html', {"output": output})
+            
+            os_type = request.POST.get('os', '').strip()
+            print(os_type)
+            if os_type == 'win':
+                command = ["nslookup", domain]
             else:
-                command = "dig {}".format(domain)
+                command = ["dig", domain]
             
             try:
-                # output=subprocess.check_output(command,shell=True,encoding="UTF-8")
                 process = subprocess.Popen(
                     command,
-                    shell=True,
                     stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
                 stdout, stderr = process.communicate()
                 data = stdout.decode('utf-8')
                 stderr = stderr.decode('utf-8')
-                # res = json.loads(data)
-                # print("Stdout\n" + data)
                 output = data + stderr
                 print(data + stderr)
-            except:
-                output = "Something went wrong"
-                return render(request,'Lab/CMD/cmd_lab.html',{"output":output})
+            except Exception as e:
+                output = f"Something went wrong: {str(e)}"
+                return render(request, 'Lab/CMD/cmd_lab.html', {"output": output})
             print(output)
-            return render(request,'Lab/CMD/cmd_lab.html',{"output":output})
+            return render(request, 'Lab/CMD/cmd_lab.html', {"output": output})
         else:
             return render(request, 'Lab/CMD/cmd_lab.html')
     else:
